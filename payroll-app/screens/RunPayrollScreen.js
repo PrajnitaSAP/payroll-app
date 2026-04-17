@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HISTORY_KEY } from './HistoryScreen';
+import { MONTHLY_LOG_KEY } from './AddEmployeeScreen';
 
-const WORKING_DAYS = 26; // standard working days per month
+const WORKING_DAYS = 26;
 
 function calcNetPay(salary, absentDays, overtimeHours, bonus, advance) {
   const dailyRate = salary / WORKING_DAYS;
@@ -27,6 +28,8 @@ export default function RunPayrollScreen({ navigation, route }) {
   const employees = route.params?.employees ?? [];
   const [index, setIndex] = useState(0);
   const [records, setRecords] = useState([]);
+  const [monthlyLog, setMonthlyLog] = useState({});
+  const [startTime] = useState(Date.now());
 
   const [absentDays, setAbsentDays] = useState('0');
   const [overtimeHours, setOvertimeHours] = useState('0');
@@ -44,6 +47,32 @@ export default function RunPayrollScreen({ navigation, route }) {
 
   const dailyRate = Math.round(employee.salary / WORKING_DAYS);
   const hourlyRate = Math.round(dailyRate / 8);
+
+  useEffect(() => {
+    loadMonthlyLog();
+  }, []);
+
+  useEffect(() => {
+    if (Object.keys(monthlyLog).length > 0 && employees.length > 0) {
+      applyLogForEmployee(employees[0].id);
+    }
+  }, [monthlyLog]);
+
+  async function loadMonthlyLog() {
+    try {
+      const stored = await AsyncStorage.getItem(MONTHLY_LOG_KEY);
+      const log = stored ? JSON.parse(stored) : {};
+      setMonthlyLog(log[month] || {});
+    } catch {}
+  }
+
+  function applyLogForEmployee(empId) {
+    const empLog = monthlyLog[empId];
+    setAbsentDays(empLog ? String(empLog.absentDays) : '0');
+    setOvertimeHours(empLog ? String(empLog.overtimeHours) : '0');
+    setBonus('0');
+    setAdvance(empLog ? String(empLog.advance) : '0');
+  }
 
   function buildRecord() {
     const dailyRate = employee.salary / WORKING_DAYS;
@@ -74,11 +103,13 @@ export default function RunPayrollScreen({ navigation, route }) {
     } catch {}
   }
 
-  function resetInputs() {
-    setAbsentDays('0');
-    setOvertimeHours('0');
-    setBonus('0');
-    setAdvance('0');
+  async function clearMonthlyLog() {
+    try {
+      const stored = await AsyncStorage.getItem(MONTHLY_LOG_KEY);
+      const log = stored ? JSON.parse(stored) : {};
+      delete log[month];
+      await AsyncStorage.setItem(MONTHLY_LOG_KEY, JSON.stringify(log));
+    } catch {}
   }
 
   function handleDone() {
@@ -86,12 +117,14 @@ export default function RunPayrollScreen({ navigation, route }) {
     if (index < employees.length - 1) {
       setRecords(updated);
       setIndex(index + 1);
-      resetInputs();
+      applyLogForEmployee(employees[index + 1].id);
     } else {
       saveHistory(updated);
+      clearMonthlyLog();
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
       Alert.alert(
         'Payroll Complete',
-        `Payroll for ${month} is done for all ${employees.length} employees.`,
+        `Done in ${elapsed} seconds for ${employees.length} employees!`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     }
@@ -100,12 +133,14 @@ export default function RunPayrollScreen({ navigation, route }) {
   function handleSkip() {
     if (index < employees.length - 1) {
       setIndex(index + 1);
-      resetInputs();
+      applyLogForEmployee(employees[index + 1].id);
     } else {
       saveHistory(records);
+      clearMonthlyLog();
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
       Alert.alert(
         'Payroll Complete',
-        `Payroll for ${month} is done for all ${employees.length} employees.`,
+        `Done in ${elapsed} seconds for ${employees.length} employees!`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     }
