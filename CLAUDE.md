@@ -48,17 +48,21 @@ Paid leave does not affect the payout — it is counted as worked days.
 - Header: "My Team" (tappable — navigates to History) with a payslip icon on the left and [+ Add] button on the right.
 - Payslip icon: drawn entirely with React Native `View`/`Text` — document outline with folded corner, 3 text lines, `$` sign, and a `$↓` badge circle. No external icon library. Tap navigates to Payroll History.
 - Search bar directly below the header — filters the list live on every keystroke (case-insensitive name match).
-- Each employee row shows name and monthly salary.
+- Tagline "60-second payroll for your team" shown below search bar when employees exist and payroll has not been run for the current month.
+- **Payroll Summary Card**: Replaces the tagline once payroll is complete for the current month. Green left border, shows "✓ Payroll Done" with month name, three stats (Total Paid, Total Leaves, Employees), and a "View Full Breakdown →" link to History. Disappears next calendar month. Re-running payroll updates the card.
+- Each employee row shows name, monthly salary, and (if log data exists for the current month) a blue summary line like "3d absent · 5h OT · ₹500 advance".
 - Bottom: full-width [Run Payroll] button (hidden when list is empty or all results are filtered out).
 
 ### Screen 2 — Add/Edit Employee
 - Back arrow + "New Employee" / "Edit Employee" title.
 - Three fields only: Full Name, Phone Number, Monthly Salary (₹).
+- **"This Month" section** (edit mode only): Appears below the employee fields. Shows current month name and three stepper fields — Absent Days (step 0.5), Overtime Hours (step 1), Advance ₹ (step 500). Each field has − / + buttons and a direct-edit text input between them.
+- Log data saved to AsyncStorage under `monthly_log` key; auto-saves on back navigation.
 - [Save Employee] button at the bottom.
 
 ### Screen 3 — Run Payroll (Monthly Inputs)
 - One employee at a time, header shows month name.
-- Shows base salary, then four input fields pre-filled with 0: Unpaid Absent Days, Overtime Hours, Festival Bonus (₹), Advance Recovery (₹).
+- Shows base salary, then four input fields pre-filled from the monthly log (or 0 if no log): Unpaid Absent Days, Overtime Hours, Festival Bonus (₹), Advance Recovery (₹).
 - Live net pay calculation shown below inputs — updates as employer types.
 - All days counted as worked by default; only unpaid absent days reduce pay.
 - Paid leave = no entry needed (counts as worked).
@@ -77,12 +81,13 @@ Paid leave does not affect the payout — it is counted as worked days.
 payroll-app/
 ├── App.js                          ← navigation setup + HistoryIcon component
 ├── components/
+│   ├── ConfirmRemoveModal.js       ← delete-employee confirmation modal
 │   └── SearchBar.js                ← reusable search input component
 └── screens/
-    ├── EmployeeListScreen.js       ← Screen 1
-    ├── AddEmployeeScreen.js        ← Screen 2
-    ├── RunPayrollScreen.js         ← Screen 3 (saves history on finish)
-    └── HistoryScreen.js            ← Screen 4 — payroll history by month
+    ├── EmployeeListScreen.js       ← Screen 1 (exports EMPLOYEES_KEY)
+    ├── AddEmployeeScreen.js        ← Screen 2 (exports MONTHLY_LOG_KEY)
+    ├── RunPayrollScreen.js         ← Screen 3 (saves history + clears log on finish)
+    └── HistoryScreen.js            ← Screen 4 (exports HISTORY_KEY)
 ```
 
 ### Payroll Calculation Formula
@@ -103,16 +108,25 @@ Net Pay     = Base salary − Deduction + Overtime + Festival bonus − Advance 
 - Employee list reloads on every screen focus (picks up adds/edits immediately).
 - Seeded with 3 sample employees on first launch so the app is not empty.
 - Search bar on Screen 1 filters employees by name in real time; Run Payroll passes the full unfiltered list.
-- Run Payroll walks through employees one at a time; inputs reset to 0 for each.
+- Run Payroll walks through employees one at a time; inputs pre-filled from the monthly log (absent days, overtime, advance); bonus defaults to 0.
 - Net Pay on Screen 3 recalculates live on every keystroke.
 - Employer can skip an employee — they are excluded from the saved history for that month.
 - On "Finish Payroll", the full run is saved to AsyncStorage under key `payroll_history` (array of `{ monthKey, records }`). Re-running the same month overwrites that month's entry.
+- On "Finish Payroll", the current month's `monthly_log` is cleared so logs start fresh next month.
+- Completion alert shows elapsed time (e.g. "Done in 38 seconds for 5 employees!").
 
 ### History Screen (`screens/HistoryScreen.js`)
 - AsyncStorage key: `HISTORY_KEY = 'payroll_history'` (exported for use in RunPayrollScreen).
 - Data shape: `[{ monthKey: 'April 2025', records: [{ employeeId, name, baseSalary, deduction, overtime, bonus, advance, netPay }] }]` — newest month first.
 - Each month card shows total payout and employee count; tap to expand per-employee breakdown.
 - Breakdown colours: deduction in red `#FF3B30`, overtime in blue `#007AFF`, bonus in green `#34C759`, advance in red `#FF3B30`.
+
+### Monthly Log (`screens/AddEmployeeScreen.js`)
+- AsyncStorage key: `MONTHLY_LOG_KEY = 'monthly_log'` (exported for use in RunPayrollScreen and EmployeeListScreen).
+- Data shape: `{ "April 2026": { "<employeeId>": { absentDays: number, overtimeHours: number, advance: number } } }`.
+- Written from AddEmployeeScreen (edit mode); read by RunPayrollScreen (pre-fill) and EmployeeListScreen (summary display).
+- Cleared for the current month after payroll completes.
+- Employee's log entry deleted when the employee is removed.
 
 ### SearchBar Component (`components/SearchBar.js`)
 - Accepts a single prop: `onChangeText(text)` — called on every keystroke.
