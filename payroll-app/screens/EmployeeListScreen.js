@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import SearchBar from '../components/SearchBar';
 
 export const EMPLOYEES_KEY = 'employees';
 
@@ -19,6 +20,13 @@ const SAMPLE_EMPLOYEES = [
 
 export default function EmployeeListScreen({ navigation }) {
   const [employees, setEmployees] = useState([]);
+  const [query, setQuery] = useState('');
+
+  const filtered = query.trim()
+    ? employees.filter((e) =>
+        e.name.toLowerCase().includes(query.trim().toLowerCase())
+      )
+    : employees;
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadEmployees);
@@ -59,8 +67,9 @@ export default function EmployeeListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <SearchBar onChangeText={setQuery} />
       <FlatList
-        data={employees}
+        data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <EmployeeRow item={item} />}
         contentContainerStyle={styles.listContent}
@@ -73,7 +82,7 @@ export default function EmployeeListScreen({ navigation }) {
         }
       />
 
-      {employees.length > 0 && (
+      {filtered.length > 0 && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={styles.payrollButton}

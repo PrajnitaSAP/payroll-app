@@ -10,24 +10,28 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { HISTORY_KEY } from './HistoryScreen';
 
 const WORKING_DAYS = 26; // standard working days per month
 
-function calcNetPay(salary, absentDays, overtimeHours, bonus) {
+function calcNetPay(salary, absentDays, overtimeHours, bonus, advance) {
   const dailyRate = salary / WORKING_DAYS;
   const hourlyRate = dailyRate / 8;
   const deduction = dailyRate * absentDays;
   const overtime = hourlyRate * overtimeHours;
-  return Math.round(salary - deduction + overtime + bonus);
+  return Math.round(salary - deduction + overtime + bonus - advance);
 }
 
 export default function RunPayrollScreen({ navigation, route }) {
   const employees = route.params?.employees ?? [];
   const [index, setIndex] = useState(0);
+  const [records, setRecords] = useState([]);
 
   const [absentDays, setAbsentDays] = useState('0');
   const [overtimeHours, setOvertimeHours] = useState('0');
   const [bonus, setBonus] = useState('0');
+  const [advance, setAdvance] = useState('0');
 
   const employee = employees[index];
   const month = new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
@@ -35,19 +39,70 @@ export default function RunPayrollScreen({ navigation, route }) {
   const absent = parseFloat(absentDays) || 0;
   const overtime = parseFloat(overtimeHours) || 0;
   const bonusAmt = parseFloat(bonus) || 0;
-  const netPay = calcNetPay(employee.salary, absent, overtime, bonusAmt);
+  const advanceAmt = parseFloat(advance) || 0;
+  const netPay = calcNetPay(employee.salary, absent, overtime, bonusAmt, advanceAmt);
 
   const dailyRate = Math.round(employee.salary / WORKING_DAYS);
   const hourlyRate = Math.round(dailyRate / 8);
 
+  function buildRecord() {
+    const dailyRate = employee.salary / WORKING_DAYS;
+    const hourlyRate = dailyRate / 8;
+    return {
+      employeeId: employee.id,
+      name: employee.name,
+      baseSalary: employee.salary,
+      deduction: Math.round(dailyRate * absent),
+      overtime: Math.round(hourlyRate * overtime),
+      bonus: bonusAmt,
+      advance: advanceAmt,
+      netPay,
+    };
+  }
+
+  async function saveHistory(allRecords) {
+    try {
+      const stored = await AsyncStorage.getItem(HISTORY_KEY);
+      const history = stored ? JSON.parse(stored) : [];
+      const existing = history.findIndex((h) => h.monthKey === month);
+      if (existing >= 0) {
+        history[existing] = { monthKey: month, records: allRecords };
+      } else {
+        history.unshift({ monthKey: month, records: allRecords });
+      }
+      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } catch {}
+  }
+
+  function resetInputs() {
+    setAbsentDays('0');
+    setOvertimeHours('0');
+    setBonus('0');
+    setAdvance('0');
+  }
+
   function handleDone() {
+    const updated = [...records, buildRecord()];
     if (index < employees.length - 1) {
-      // Move to next employee, reset inputs
+      setRecords(updated);
       setIndex(index + 1);
-      setAbsentDays('0');
-      setOvertimeHours('0');
-      setBonus('0');
+      resetInputs();
     } else {
+      saveHistory(updated);
+      Alert.alert(
+        'Payroll Complete',
+        `Payroll for ${month} is done for all ${employees.length} employees.`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }
+
+  function handleSkip() {
+    if (index < employees.length - 1) {
+      setIndex(index + 1);
+      resetInputs();
+    } else {
+      saveHistory(records);
       Alert.alert(
         'Payroll Complete',
         `Payroll for ${month} is done for all ${employees.length} employees.`,
@@ -134,6 +189,24 @@ export default function RunPayrollScreen({ navigation, route }) {
             </View>
           </View>
 
+          <View style={styles.fieldDivider} />
+
+          <View style={styles.field}>
+            <View style={styles.fieldRow}>
+              <View style={styles.fieldLeft}>
+                <Text style={styles.fieldLabel}>Advance Recovery (₹)</Text>
+                <Text style={styles.fieldHint}>− Deducted from net pay</Text>
+              </View>
+              <TextInput
+                style={styles.numInput}
+                value={advance}
+                onChangeText={setAdvance}
+                keyboardType="numeric"
+                selectTextOnFocus
+              />
+            </View>
+          </View>
+
         </View>
 
         {/* Net Pay */}
@@ -147,6 +220,11 @@ export default function RunPayrollScreen({ navigation, route }) {
           <Text style={styles.doneButtonText}>
             {index < employees.length - 1 ? '✓ Done, Next Employee' : '✓ Finish Payroll'}
           </Text>
+        </TouchableOpacity>
+
+        {/* Skip button */}
+        <TouchableOpacity style={styles.skipButton} activeOpacity={0.8} onPress={handleSkip}>
+          <Text style={styles.skipButtonText}>Skip Employee</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -273,5 +351,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+  },
+  skipButton: {
+    marginTop: 12,
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FF3B30',
+  },
+  skipButtonText: {
+    color: '#FF3B30',
+    fontSize: 17,
+    fontWeight: '600',
   },
 });
