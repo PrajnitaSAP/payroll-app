@@ -51,7 +51,7 @@ Paid leave does not affect the payout — it is counted as worked days.
 - Tagline "60-second payroll for your team" shown below search bar when employees exist and payroll has not been run for the current month.
 - **Payroll Summary Card**: Replaces the tagline once payroll is complete for the current month. Green left border, shows "✓ Payroll Done" with month name, three stats (Total Paid, Total Leaves, Employees), and a "View Full Breakdown →" link to History. Disappears next calendar month. Re-running payroll updates the card.
 - Each employee row shows name, monthly salary, and (if log data exists for the current month) a blue summary line like "3d absent · 5h OT · ₹500 advance".
-- Bottom: full-width [Run Payroll] button (hidden when list is empty or all results are filtered out).
+- Bottom: full-width [Run Payroll] button (hidden when list is empty or all results are filtered out). After payroll completes, transforms to a green-outlined "✓ Payroll Done" button showing a playful speed message (e.g. "Lightning fast! Finished in 23s") and a "Tap to re-run" link. Tapping still navigates to RunPayroll for re-runs.
 
 ### Screen 2 — Add/Edit Employee
 - Back arrow + "New Employee" / "Edit Employee" title.
@@ -117,7 +117,7 @@ Net Pay     = Base salary − Deduction + Overtime + Festival bonus − Advance 
 
 ### History Screen (`screens/HistoryScreen.js`)
 - AsyncStorage key: `HISTORY_KEY = 'payroll_history'` (exported for use in RunPayrollScreen).
-- Data shape: `[{ monthKey: 'April 2025', records: [{ employeeId, name, baseSalary, deduction, overtime, bonus, advance, netPay }] }]` — newest month first.
+- Data shape: `[{ monthKey: 'April 2025', elapsedSeconds: 38, records: [{ employeeId, name, baseSalary, deduction, overtime, bonus, advance, netPay }] }]` — newest month first.
 - Each month card shows total payout and employee count; tap to expand per-employee breakdown.
 - Breakdown colours: deduction in red `#FF3B30`, overtime in blue `#007AFF`, bonus in green `#34C759`, advance in red `#FF3B30`.
 

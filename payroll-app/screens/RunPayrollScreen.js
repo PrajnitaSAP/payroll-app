@@ -24,6 +24,46 @@ function calcNetPay(salary, absentDays, overtimeHours, bonus, advance) {
   return Math.round(salary - deduction + overtime + bonus - advance);
 }
 
+function StepperField({ label, hint, value, onChangeText, step, keyboardType }) {
+  const num = parseFloat(value) || 0;
+
+  function decrement() {
+    const next = Math.max(0, Math.round((num - step) * 100) / 100);
+    onChangeText(String(next));
+  }
+
+  function increment() {
+    const next = Math.round((num + step) * 100) / 100;
+    onChangeText(String(next));
+  }
+
+  return (
+    <View style={styles.field}>
+      <View style={styles.fieldRow}>
+        <View style={styles.fieldLeft}>
+          <Text style={styles.fieldLabel}>{label}</Text>
+          <Text style={styles.fieldHint}>{hint}</Text>
+        </View>
+        <View style={styles.stepperRight}>
+          <TouchableOpacity style={styles.stepperBtn} activeOpacity={0.7} onPress={decrement}>
+            <Text style={styles.stepperBtnText}>−</Text>
+          </TouchableOpacity>
+          <TextInput
+            style={styles.stepperValue}
+            value={value}
+            onChangeText={onChangeText}
+            keyboardType={keyboardType ?? 'decimal-pad'}
+            selectTextOnFocus
+          />
+          <TouchableOpacity style={styles.stepperBtn} activeOpacity={0.7} onPress={increment}>
+            <Text style={styles.stepperBtnText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function RunPayrollScreen({ navigation, route }) {
   const employees = route.params?.employees ?? [];
   const [index, setIndex] = useState(0);
@@ -89,17 +129,18 @@ export default function RunPayrollScreen({ navigation, route }) {
     };
   }
 
-  async function saveHistory(allRecords) {
+  async function saveHistory(allRecords, elapsedSeconds) {
     try {
       const stored = await AsyncStorage.getItem(HISTORY_KEY);
       const history = stored ? JSON.parse(stored) : [];
       const existing = history.findIndex((h) => h.monthKey === month);
+      const entry = { monthKey: month, records: allRecords, elapsedSeconds };
       if (existing >= 0) {
-        history[existing] = { monthKey: month, records: allRecords };
+        history[existing] = entry;
       } else {
-        history.unshift({ monthKey: month, records: allRecords });
+        history.unshift(entry);
       }
-      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 12)));
     } catch {}
   }
 
@@ -119,9 +160,9 @@ export default function RunPayrollScreen({ navigation, route }) {
       setIndex(index + 1);
       applyLogForEmployee(employees[index + 1].id);
     } else {
-      saveHistory(updated);
-      clearMonthlyLog();
       const elapsed = Math.round((Date.now() - startTime) / 1000);
+      saveHistory(updated, elapsed);
+      clearMonthlyLog();
       Alert.alert(
         'Payroll Complete',
         `Done in ${elapsed} seconds for ${employees.length} employees!`,
@@ -135,9 +176,9 @@ export default function RunPayrollScreen({ navigation, route }) {
       setIndex(index + 1);
       applyLogForEmployee(employees[index + 1].id);
     } else {
-      saveHistory(records);
-      clearMonthlyLog();
       const elapsed = Math.round((Date.now() - startTime) / 1000);
+      saveHistory(records, elapsed);
+      clearMonthlyLog();
       Alert.alert(
         'Payroll Complete',
         `Done in ${elapsed} seconds for ${employees.length} employees!`,
@@ -172,39 +213,23 @@ export default function RunPayrollScreen({ navigation, route }) {
         {/* Inputs */}
         <View style={styles.fieldGroup}>
 
-          <View style={styles.field}>
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLeft}>
-                <Text style={styles.fieldLabel}>Unpaid Absent Days</Text>
-                <Text style={styles.fieldHint}>− ₹{dailyRate.toLocaleString('en-IN')} per day</Text>
-              </View>
-              <TextInput
-                style={styles.numInput}
-                value={absentDays}
-                onChangeText={setAbsentDays}
-                keyboardType="decimal-pad"
-                selectTextOnFocus
-              />
-            </View>
-          </View>
+          <StepperField
+            label="Unpaid Absent Days"
+            hint={`− ₹${dailyRate.toLocaleString('en-IN')} per day`}
+            value={absentDays}
+            onChangeText={setAbsentDays}
+            step={0.5}
+          />
 
           <View style={styles.fieldDivider} />
 
-          <View style={styles.field}>
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLeft}>
-                <Text style={styles.fieldLabel}>Overtime Hours</Text>
-                <Text style={styles.fieldHint}>+ ₹{hourlyRate.toLocaleString('en-IN')} per hour</Text>
-              </View>
-              <TextInput
-                style={styles.numInput}
-                value={overtimeHours}
-                onChangeText={setOvertimeHours}
-                keyboardType="decimal-pad"
-                selectTextOnFocus
-              />
-            </View>
-          </View>
+          <StepperField
+            label="Overtime Hours"
+            hint={`+ ₹${hourlyRate.toLocaleString('en-IN')} per hour`}
+            value={overtimeHours}
+            onChangeText={setOvertimeHours}
+            step={1}
+          />
 
           <View style={styles.fieldDivider} />
 
@@ -215,10 +240,10 @@ export default function RunPayrollScreen({ navigation, route }) {
                 <Text style={styles.fieldHint}>One-time addition</Text>
               </View>
               <TextInput
-                style={styles.numInput}
+                style={styles.advanceInput}
                 value={bonus}
-                onChangeText={setBonus}
-                keyboardType="numeric"
+                onChangeText={(val) => setBonus(val.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
                 selectTextOnFocus
               />
             </View>
@@ -233,10 +258,10 @@ export default function RunPayrollScreen({ navigation, route }) {
                 <Text style={styles.fieldHint}>− Deducted from net pay</Text>
               </View>
               <TextInput
-                style={styles.numInput}
+                style={styles.advanceInput}
                 value={advance}
-                onChangeText={setAdvance}
-                keyboardType="numeric"
+                onChangeText={(val) => setAdvance(val.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
                 selectTextOnFocus
               />
             </View>
@@ -356,6 +381,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.5,
     borderBottomColor: '#007AFF',
     paddingBottom: 2,
+  },
+  advanceInput: {
+    width: 72,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#007AFF',
+    textAlign: 'right',
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#007AFF',
+    paddingBottom: 2,
+  },
+  stepperRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stepperBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperBtnText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#007AFF',
+    lineHeight: 22,
+  },
+  stepperValue: {
+    width: 56,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#007AFF',
+    textAlign: 'center',
   },
   netPayCard: {
     backgroundColor: '#fff',

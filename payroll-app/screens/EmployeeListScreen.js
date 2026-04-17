@@ -76,6 +76,20 @@ function PayrollSummaryCard({ payroll, onViewDetails }) {
   );
 }
 
+function formatElapsed(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+}
+
+function getSpeedMessage(seconds) {
+  if (seconds <= 30) return 'Lightning fast!';
+  if (seconds <= 60) return 'Under a minute!';
+  if (seconds <= 120) return 'Quick work!';
+  return 'All done!';
+}
+
 export default function EmployeeListScreen({ navigation }) {
   const [employees, setEmployees] = useState([]);
   const [monthlyLog, setMonthlyLog] = useState({});
@@ -174,13 +188,29 @@ export default function EmployeeListScreen({ navigation }) {
 
       {filtered.length > 0 && (
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.payrollButton}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('RunPayroll', { employees })}
-          >
-            <Text style={styles.payrollButtonText}>Run Payroll</Text>
-          </TouchableOpacity>
+          {currentMonthPayroll ? (
+            <TouchableOpacity
+              style={styles.payrollDoneButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('RunPayroll', { employees })}
+            >
+              <Text style={styles.payrollDoneText}>✓ Payroll Done</Text>
+              {currentMonthPayroll.elapsedSeconds != null && (
+                <Text style={styles.payrollSpeedText}>
+                  {getSpeedMessage(currentMonthPayroll.elapsedSeconds)} Finished in {formatElapsed(currentMonthPayroll.elapsedSeconds)}
+                </Text>
+              )}
+              <Text style={styles.payrollRerunText}>Tap to re-run</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.payrollButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('RunPayroll', { employees })}
+            >
+              <Text style={styles.payrollButtonText}>Run Payroll</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -340,5 +370,29 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+  },
+  payrollDoneButton: {
+    backgroundColor: '#F0FFF4',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#34C759',
+  },
+  payrollDoneText: {
+    color: '#34C759',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  payrollSpeedText: {
+    color: '#8E8E93',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  payrollRerunText: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

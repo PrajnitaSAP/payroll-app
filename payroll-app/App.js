@@ -19,9 +19,9 @@ function HistoryIcon({ onPress }) {
         {/* Fold crease line */}
         <View style={styles.foldLine} />
         {/* Text lines */}
-        <View style={[styles.docLine, { width: 18, top: 9 }]} />
-        <View style={[styles.docLine, { width: 13, top: 15 }]} />
-        <View style={[styles.docLine, { width: 16, top: 21 }]} />
+        <View style={[styles.docLine, { width: 14, top: 7 }]} />
+        <View style={[styles.docLine, { width: 10, top: 12 }]} />
+        <View style={[styles.docLine, { width: 12, top: 17 }]} />
         {/* Dollar sign on document */}
         <Text style={styles.docDollar}>$</Text>
       </View>
@@ -99,26 +99,26 @@ const styles = StyleSheet.create({
   },
   historyBtn: {
     marginRight: 4,
-    width: 42,
-    height: 52,
+    width: 34,
+    height: 40,
   },
   doc: {
     position: 'absolute',
     top: 0,
     left: 0,
-    width: 32,
-    height: 42,
-    borderWidth: 3,
+    width: 26,
+    height: 34,
+    borderWidth: 2.5,
     borderColor: '#3D3D3D',
-    borderRadius: 5,
+    borderRadius: 4,
     borderTopRightRadius: 0,
   },
   foldMask: {
     position: 'absolute',
-    top: -5,
-    right: -5,
-    width: 13,
-    height: 13,
+    top: -4,
+    right: -4,
+    width: 10,
+    height: 10,
     backgroundColor: '#fff',
     transform: [{ rotate: '45deg' }],
   },
@@ -126,25 +126,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    width: 11,
-    height: 11,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
+    width: 9,
+    height: 9,
+    borderBottomWidth: 2.5,
+    borderLeftWidth: 2.5,
     borderBottomColor: '#3D3D3D',
     borderLeftColor: '#3D3D3D',
   },
   docLine: {
     position: 'absolute',
-    left: 5,
-    height: 2.5,
+    left: 4,
+    height: 2,
     backgroundColor: '#3D3D3D',
-    borderRadius: 1.5,
+    borderRadius: 1,
   },
   docDollar: {
     position: 'absolute',
-    bottom: 4,
-    left: 4,
-    fontSize: 15,
+    bottom: 3,
+    left: 3,
+    fontSize: 12,
     fontWeight: '700',
     color: '#3D3D3D',
   },
@@ -152,10 +152,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 3,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2.5,
     borderColor: '#3D3D3D',
     backgroundColor: '#fff',
     justifyContent: 'center',
@@ -163,16 +163,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   badgeDollar: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: '700',
     color: '#3D3D3D',
-    lineHeight: 11,
+    lineHeight: 9,
   },
   badgeArrow: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: '700',
     color: '#3D3D3D',
-    lineHeight: 11,
+    lineHeight: 9,
   },
   addButton: {
     backgroundColor: '#007AFF',
